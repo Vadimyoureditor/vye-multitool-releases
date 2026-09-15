@@ -1,0 +1,53 @@
+name: Claude Code Backlog Manager
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run reports only; apply makes changes"
+        required: true
+        default: "dry-run"
+        type: choice
+        options:
+          - dry-run
+          - apply
+
+  # Für die geplante automatische Ausführung auskommentieren:
+  # schedule:
+  #   - cron: "0 7 * * 1-5"
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  manage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Claude Code Backlog Manager
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          display_report: true
+          show_full_output: true
+          prompt: |
+            Use the backlog-manager skill in ${{ inputs.mode || 'apply' }} mode for the GitHub repo owainlewis/neo. The backlog source of truth is GitHub Issues for this repository.
+            Project board reference: https://github.com/users/Vadimyoureditor/projects/2/views/1
+
+            Environment constraints for this run:
+            - You are running unattended in GitHub Actions. Never wait for input; record any blocker in the final report.
+            - The GITHUB_TOKEN cannot edit user-level GitHub Projects. Skip project board mutations and list them in the report as proposed actions instead.
+            - In apply mode the allowed mutations are: managed labels, Agent Assessment comments, closing issues with linked merged-PR evidence, and creating evidence-backed issues. Everything else is report-only.
+
+            End with a compact final report containing:
+            1. Mode
+            2. Issues inspected
+            3. Issues triaged
+            4. Labels/comments created
+            5. Proposed project-board changes
+            6. Blockers
